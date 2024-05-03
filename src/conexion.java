@@ -11,11 +11,12 @@ public class conexion {
     static final String DB_URL = "jdbc:mariadb://"+SERVER_IP + ":3306/" + DB_NAME;
     private Connection conn;
 
-    public Connection MyConexion(){
+    public static Connection MyConexion(){
+        Connection conn = null;
         try {
             Class.forName(JDBC_DRIVER);
             //System.out.println("Connecting to the database...");
-            conn = (org.mariadb.jdbc.Connection) DriverManager.getConnection(DB_URL, USER, PASSWORD);
+            conn =DriverManager.getConnection(DB_URL, USER, PASSWORD);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         } catch (SQLException e) {

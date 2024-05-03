@@ -9,12 +9,14 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class VisualizadorFotos extends JFrame {
     public static void visualizadorFotos() {
 
         JFrame jFrame = new JFrame("Photography");
-        jFrame.setLayout(new GridLayout(2,2));
+        jFrame.setLayout(new GridLayout(3,2));
 
 
         //JPanel donde se muestran los nombres de los fotografos
@@ -103,14 +105,35 @@ public class VisualizadorFotos extends JFrame {
             }
         });
 
-
-
         lista.add(scrollPane);
         jFrame.add(lista);
 
-
         panelImagen.add(imagen);
         jFrame.add(panelImagen);
+
+
+        JPanel botones = new JPanel();
+        JButton award = new JButton("AWARD");
+        award.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int min = Integer.parseInt(JOptionPane.showInputDialog(null, "Minimo de visitas para recibir un premio:"));
+                System.out.println(min);
+                premiarFotografos(min, createVisitsMap());
+            }
+        });
+
+
+        JButton remove = new JButton("REMOVE");
+        remove.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                eliminarFotos(createVisitsMap());
+            }
+        });
+        botones.add(award);
+        botones.add(remove);
+        jFrame.add(botones);
 
 
         jFrame.setPreferredSize(new Dimension(500,400));
@@ -222,5 +245,47 @@ public class VisualizadorFotos extends JFrame {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static HashMap<Integer,Integer> createVisitsMap() {
+        HashMap<Integer,Integer> visitas = new HashMap<>();
+        Connection conn = conexion.MyConexion();
+
+        try(PreparedStatement select = conn.prepareStatement("SELECT fotografo.IDfotografo, sum(visitas) from fotografo, fotos where fotografo.IDfotografo=fotos.IDfotografo GROUP BY fotografo.IDfotografo")) {
+            ResultSet res= select.executeQuery();
+            while (res.next()) {
+                int id = res.getInt(1);
+                int vis = res.getInt(2);
+                System.out.println(id + " | " + vis);
+                visitas.put(id,vis);
+            }
+
+            return visitas;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static void premiarFotografos(int min, HashMap<Integer,Integer> mapaVisitas) {
+        Connection conn = conexion.MyConexion();
+
+        Iterator it = mapaVisitas.keySet().iterator();
+        while (it.hasNext()) {
+            int clave = (int) it.next();
+            int valor = mapaVisitas.get(clave);
+            if (valor>=min) {
+                try(PreparedStatement update = conn.prepareStatement("UPDATE fotografo SET premiado = 1 where IDfotografo = ?")) {
+                    update.setInt(1,clave);
+                    update.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public static void eliminarFotos(HashMap<Integer,Integer> mapaVisitas) {
+
     }
 }
