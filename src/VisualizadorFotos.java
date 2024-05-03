@@ -285,6 +285,7 @@ public class VisualizadorFotos extends JFrame {
         }
     }
 
+
     public static void eliminarFotos(HashMap<Integer,Integer> mapaVisitas) {
 
     }
