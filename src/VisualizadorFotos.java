@@ -1,4 +1,5 @@
 import org.jdesktop.swingx.JXDatePicker;
+import org.mariadb.jdbc.export.Prepare;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -128,7 +129,7 @@ public class VisualizadorFotos extends JFrame {
         remove.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                eliminarFotos(createVisitsMap());
+                eliminarFotos();
             }
         });
         botones.add(award);
@@ -270,7 +271,7 @@ public class VisualizadorFotos extends JFrame {
     public static void premiarFotografos(int min, HashMap<Integer,Integer> mapaVisitas) {
         Connection conn = conexion.MyConexion();
 
-        Iterator it = mapaVisitas.keySet().iterator();
+        Iterator<Integer> it = mapaVisitas.keySet().iterator();
         while (it.hasNext()) {
             int clave = (int) it.next();
             int valor = mapaVisitas.get(clave);
@@ -286,8 +287,56 @@ public class VisualizadorFotos extends JFrame {
     }
 
 
-    public static void eliminarFotos(HashMap<Integer,Integer> mapaVisitas) {
+    public static void eliminarFotos() {
+        Connection conn = conexion.MyConexion();
 
+
+        try(PreparedStatement select = conn.prepareStatement("SELECT * FROM fotos f, fotografo fg where f.visitas=0 AND fg.premiado=0 AND f.IDfotografo=fg.IDfotografo")) {
+            ResultSet res = select.executeQuery();
+
+            //Preguntar por cada resultado si quiere eliminar la foto
+            while(res.next()) {
+                String nombre = res.getString("f.titulo");
+                String autor = res.getString("fg.nombre");
+                int idFoto=res.getInt("f.IDfoto");
+
+                int respuesta=JOptionPane.showConfirmDialog(null,"¿Desea eliminar la foto " + nombre + " del autor " + autor + "?");
+
+                if (JOptionPane.OK_OPTION == respuesta){
+                    System.out.println("Selecciona opción Afirmativa");
+                    try(PreparedStatement delete = conn.prepareStatement("DELETE FROM fotos where IDfoto=?")) {
+                        delete.setInt(1,idFoto);
+                        delete.executeUpdate();
+                    }catch (SQLException e) {
+                        System.out.println("ERROR: 2");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }catch (SQLException e) {
+            System.out.println("ERROR: 1");
+            e.printStackTrace();
+        }
+
+
+        //Eliminar fotografos sin fotos
+        try(PreparedStatement select2 = conn.prepareStatement("SELECT IDfotografo FROM fotografo WHERE IDfotografo NOT IN (SELECT DISTINCT IDfotografo FROM fotos)")) {
+            ResultSet res2=select2.executeQuery();
+            while (res2.next()) {
+                int id=res2.getInt("IDfotografo");
+                try(PreparedStatement delete2 = conn.prepareStatement("DELETE FROM fotografo WHERE IDfotografo=?")) {
+                    delete2.setInt(1,id);
+                    delete2.executeUpdate();
+                }catch (SQLException e) {
+                    System.out.println("ERROR: 4");
+                    e.printStackTrace();
+                }
+            }
+
+        }catch(SQLException e) {
+            System.out.println("ERROR: 3");
+            e.printStackTrace();
+        }
 
     }
 }
