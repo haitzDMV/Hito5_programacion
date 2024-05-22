@@ -24,8 +24,6 @@ public class VisualizadorFotos extends JFrame {
         JPanel fotografos = new JPanel();
         JLabel jlfotografos = new JLabel("Photographer:");
         JComboBox jcfotografos = new JComboBox();
-        jcfotografos.addItem("");
-
 
         //Mostrar todos los fotografos
         ArrayList<Fotografo> f = listaFotografos();
@@ -42,7 +40,7 @@ public class VisualizadorFotos extends JFrame {
         //Jpanel donde estará el calendario
         JPanel fecha = new JPanel();
         JLabel jlfotos = new JLabel("Photos after:");
-        JXDatePicker date = new JXDatePicker(new Date());
+        JXDatePicker date = new JXDatePicker();
         SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
 
 
@@ -81,9 +79,16 @@ public class VisualizadorFotos extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 model.clear();
-                ArrayList<String> a = buscarFotografias(jcfotografos.getSelectedIndex(), fechaSQL[0]);
-                for (String fotos: a) {
-                    model.addElement(fotos);
+                if (fechaSQL[0]==null) {
+                    ArrayList<String> a = buscarFotografias(jcfotografos.getSelectedIndex());
+                    for (String fotos: a) {
+                        model.addElement(fotos);
+                    }
+                }else {
+                    ArrayList<String> a = buscarFotografias(jcfotografos.getSelectedIndex(), fechaSQL[0]);
+                    for (String fotos: a) {
+                        model.addElement(fotos);
+                    }
                 }
             }
         });
@@ -91,18 +96,16 @@ public class VisualizadorFotos extends JFrame {
         //Jpanel para la imagen
         JPanel panelImagen = new JPanel();
         JLabel imagen = new JLabel();
-        imagen.setPreferredSize(new Dimension(100,100));
+        imagen.setPreferredSize(new Dimension(200,200));
 
         //Action Listener para mostrar la imagen seleccionada
-        jList.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                String imagenSeleccionada = jList.getSelectedValue();
-                Fotografias f = devuelveFotografia(imagenSeleccionada,jcfotografos.getSelectedIndex());
-                ImageIcon icon = new ImageIcon(f.getArchivo());
+        jList.addListSelectionListener(e -> {
+            String imagenSeleccionada = jList.getSelectedValue();
+            Fotografias f2 = devuelveFotografia(imagenSeleccionada, jcfotografos.getSelectedIndex());
+            if (f2 != null) {
+                ImageIcon icon = new ImageIcon(f2.getArchivo());
                 imagen.setIcon(icon);
-                incrementarVisitas(devuelveFotografia(imagenSeleccionada,jcfotografos.getSelectedIndex()));
-
+                incrementarVisitas(f2);
             }
         });
 
@@ -159,7 +162,7 @@ public class VisualizadorFotos extends JFrame {
         try (PreparedStatement select = conn.prepareStatement("Select * from fotografo")) {
             ResultSet res = select.executeQuery();
             while (res.next()) {
-                int id = res.getInt("idFotografo");
+                int id = res.getInt("iDfotografo");
                 String nombre = res.getString("nombre");
                 Boolean premiado = res.getBoolean("premiado");
 
@@ -178,9 +181,27 @@ public class VisualizadorFotos extends JFrame {
         ArrayList<String> ALreturn =new ArrayList<>();
         conexion conexion = new conexion();
         Connection conn=conexion.MyConexion();
-        try(PreparedStatement select = conn.prepareStatement("SELECT * from fotos where IDfotografo = ? AND fecha < ?")) {
-            select.setInt(1,idFotografo);
+        try(PreparedStatement select = conn.prepareStatement("SELECT * from fotos where IDfotografo = ? AND fecha <= ?")) {
+            select.setInt(1,idFotografo+1);
             select.setDate(2, (java.sql.Date) fecha);
+            ResultSet res = select.executeQuery();
+            while (res.next()) {
+                String titulo = res.getString("titulo");
+                ALreturn.add(titulo);
+            }
+
+        }catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ALreturn;
+    }
+
+    public static ArrayList<String> buscarFotografias(int idFotografo) {
+        ArrayList<String> ALreturn =new ArrayList<>();
+        conexion conexion = new conexion();
+        Connection conn=conexion.MyConexion();
+        try(PreparedStatement select = conn.prepareStatement("SELECT * from fotos where IDfotografo = ?")) {
+            select.setInt(1,idFotografo+1);
             ResultSet res = select.executeQuery();
             while (res.next()) {
                 String titulo = res.getString("titulo");
@@ -201,7 +222,7 @@ public class VisualizadorFotos extends JFrame {
         Connection conn = conexion.MyConexion();
         try (PreparedStatement select = conn.prepareStatement("SELECT * from fotos where titulo = ? AND IDfotografo = ?")){
             select.setNString(1,nombreFoto);
-            select.setInt(2,idFotografo);
+            select.setInt(2,idFotografo+1);
             ResultSet res = select.executeQuery();
 
             //Sin el if da error
@@ -212,9 +233,9 @@ public class VisualizadorFotos extends JFrame {
                 String fichero = res.getString("fichero");
                 int visitas = res.getInt("visitas");
                 int IDfotografo = res.getInt("IDfotografo");
-                
+
                 f = new Fotografias(ID,titulo,fecha,fichero,visitas,IDfotografo);
-                
+
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -257,7 +278,6 @@ public class VisualizadorFotos extends JFrame {
             while (res.next()) {
                 int id = res.getInt(1);
                 int vis = res.getInt(2);
-                System.out.println(id + " | " + vis);
                 visitas.put(id,vis);
             }
 
